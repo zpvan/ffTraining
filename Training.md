@@ -96,9 +96,19 @@ ffmpeg的flv demuxer分析
 
 macOrAn实战系列
 
-player4An
+player4mac
 
-encoder4mac
+简单播放器, 播放flv
+
+gcc -o kplay kplay.c -I./include/ -L./lib/ -lavcodec -lavformat -lswscale -lz -lm
+
+可以将视频帧保存成RGB格式的ppm
+
+
+
+
+
+player4An
 
 
 
