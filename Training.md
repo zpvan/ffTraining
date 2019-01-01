@@ -126,6 +126,10 @@ gcc -o kplay2 kplay2.c -I./include/ -L./lib/ -lavcodec -lavformat -lswscale -lz 
 
 
 
+kplay3.c
+
+gcc -o kplay3 kplay3.c -I./include/ -L./lib/ -lavcodec -lavformat -lswscale -lswresample -lz -lm \`sdl-config --cflags --libs`
+
 
 
 player4An
