@@ -2,18 +2,21 @@
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
 
+#include <SDL.h>
+#include <SDL_thread.h>
+
 AVFormatContext *pFormatCtx = NULL;
 AVCodecContext *pCodecCtx = NULL;
 AVCodec *pCodec = NULL;
 AVFrame *pFrame = NULL;
-AVFrame *pFrameRGB = NULL;
 struct SwsContext *img_convert_ctx = NULL;
 
 int videoStream = -1;
 
-static unsigned sws_flags = SWS_BICUBIC;
+SDL_Surface *screen = NULL;
+SDL_Overlay *bmp = NULL;
 
-void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame);
+static unsigned sws_flags = SWS_BICUBIC;
 
 int main(int argc, char *argv[])
 {
@@ -77,6 +80,21 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER))
+    {
+        printf("could not initialize SDL %s\n", SDL_GetError());
+        return -1;
+    }
+
+    screen = SDL_SetVideoMode(pCodecCtx->width, pCodecCtx->height, 0, 0);
+    if (!screen)
+    {
+        printf("SDL: could not set video mode - exiting\n");
+        return -1;
+    }
+
+    bmp = SDL_CreateYUVOverlay(pCodecCtx->width, pCodecCtx->height,SDL_YV12_OVERLAY, screen);
+
     // 分配视频帧内存空间
     pFrame = av_frame_alloc();
     if (pFrame == NULL)
@@ -85,26 +103,19 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    // 分配RGB的视频帧内存空间
-    pFrameRGB = av_frame_alloc();
-    if (pFrameRGB == NULL)
-    {
-        printf("alloc rgb av frame failed!\n");
-        return -1;
-    }
-
-    // 申请放置原始数据的内存空间
-    uint8_t *buffer;
-    int numBytes;
-    numBytes = avpicture_get_size(AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height);
-    buffer = (uint8_t *)av_malloc(numBytes * sizeof(uint8_t));
-
-    // 把帧和新申请的内存结合起来
-    avpicture_fill((AVPicture *)pFrameRGB, buffer, AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height);
-
     // 读取媒体文件里边的视频包
     int frameFinished;
     AVPacket packet;
+
+    // 配置窗口的位置
+    SDL_Rect rect;
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = pCodecCtx->width;
+    rect.h = pCodecCtx->height;
+
+    // 接收鼠标点击事件
+    SDL_Event event;
 
     i = 0;
     while(av_read_frame(pFormatCtx, &packet) >= 0)
@@ -118,28 +129,44 @@ int main(int argc, char *argv[])
             // 如果拿到视频帧
             if (frameFinished)
             {
-                // 解码后的视频帧转换成RGB格式
-                // img_convert((AVPicture *)pFrameRGB, AV_PIX_FMT_RGB24, (AVPicture *)pFrame, pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height);
-                img_convert_ctx = sws_getCachedContext(img_convert_ctx, pFrame->width, pFrame->height, pFrame->format, pFrame->width, pFrame->height, AV_PIX_FMT_RGB24, sws_flags, NULL, NULL, NULL);
+                SDL_LockYUVOverlay(bmp);
+                
+                // 像素pixel  间距pitch
+                AVPicture pict;
+                pict.data[0] = bmp->pixels[0];
+                pict.data[1] = bmp->pixels[2];
+                pict.data[2] = bmp->pixels[1];
+
+                pict.linesize[0] = bmp->pitches[0];
+                pict.linesize[1] = bmp->pitches[2];
+                pict.linesize[2] = bmp->pitches[1];
+                // 解码后的视频帧转换成YUV420P格式
+                img_convert_ctx = sws_getCachedContext(img_convert_ctx, pFrame->width, pFrame->height, pFrame->format, pFrame->width, pFrame->height, AV_PIX_FMT_YUV420P, sws_flags, NULL, NULL, NULL);
                 if (img_convert_ctx != NULL)
                 {
-                    sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0, pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
+                    sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0, pCodecCtx->height, pict.data, pict.linesize);
                 }
 
-                // 保存视频帧到硬盘
-                if (++i > 30 && i < 35)
-                {
-                    SaveFrame(pFrameRGB, pCodecCtx->width, pCodecCtx->height, i);
-                }
+                SDL_UnlockYUVOverlay(bmp);
+
+                SDL_DisplayYUVOverlay(bmp, &rect);
             }
         }
         // 释放packet, 它是在av_read_frame里边分配内存packet.data
         av_free_packet(&packet);
-    }
 
-    // 释放RGB image
-    av_free(buffer);
-    av_free(pFrameRGB);
+        SDL_PollEvent(&event);
+        switch (event.type)
+        {
+            case SDL_QUIT:
+                SDL_Quit();
+                exit(0);
+                break;
+
+            default:
+                break;
+        }
+    }
 
     // 释放yuv image
     av_free(pFrame);
@@ -153,33 +180,8 @@ int main(int argc, char *argv[])
     // 释放sws
     sws_freeContext(img_convert_ctx);
 
+    // 退出SDL
+    SDL_Quit();
+
     return 0;
-}
-
-void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame)
-{
-    FILE *pFile;
-    char szFilename[32];
-    int y;
-
-    // 打开文件
-    sprintf(szFilename, "frame%d.ppm", iFrame);
-    pFile = fopen(szFilename, "wb");
-    if (pFile == NULL)
-    {
-        printf("open file failed!\n");
-        return;
-    }
-
-    // 写文件头
-    fprintf(pFile, "P6\n%d %d\n255\n", width, height);
-
-    // 写像素数据
-    for (y = 0; y < height; ++y)
-    {
-        fwrite(pFrame->data[0] + y * pFrame->linesize[0], 1, width * 3, pFile);
-    }
-
-    // 关闭文件
-    fclose(pFile);
 }

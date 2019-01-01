@@ -100,9 +100,29 @@ player4mac
 
 简单播放器, 播放flv
 
+
+
+kplay.c
+
 gcc -o kplay kplay.c -I./include/ -L./lib/ -lavcodec -lavformat -lswscale -lz -lm
 
 可以将视频帧保存成RGB格式的ppm
+
+./mac/kplay2 ../data/AngryBirds.flv
+
+
+
+kplay2.c
+
+查看sdl的gcc编译参数
+
+[knox @ app]$ sdl-config --cflags --libs
+-I/usr/local/include/SDL -D_GNU_SOURCE=1 -D_THREAD_SAFE
+-L/usr/local/lib -lSDLmain -lSDL -Wl,-framework,Cocoa
+
+gcc -o kplay2 kplay2.c -I./include/ -L./lib/ -lavcodec -lavformat -lswscale -lz -lm \`sdl-config --cflags --libs`
+
+可以播放视频, 不过速度要比用ffplay快, 像倍速播放一样
 
 
 
