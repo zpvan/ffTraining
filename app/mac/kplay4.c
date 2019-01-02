@@ -7,6 +7,33 @@
 #include <SDL.h>
 #include <SDL_thread.h>
 
+typedef struct VideoState 
+{
+
+    AVFormatContext *pFormatCtx;
+    int videoStream, audioStream; 
+    AVStream *audio_st;
+    PacketQueue audioq;
+    uint8_t audio_buf[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
+    unsigned int audio_buf_size;
+    unsigned int audio_buf_index;
+    AVPacket audio_pkt;
+    uint8_t *audio_pkt_data;
+    int audio_pkt_size;
+    AVStream *video_st;
+    PacketQueue     videoq;
+
+    VideoPicture    pictq[VIDEO_PICTURE_QUEUE_SIZE];
+    int pictq_size, pictq_rindex, pictq_windex;
+    SDL_mutex *pictq_mutex;
+    SDL_cond *pictq_cond;
+
+    SDL_Thread *parse_tid;
+    SDL_Thread *video_tid;
+    char filename[1024];
+    int quit;
+} VideoState;
+
 AVFormatContext *pFormatCtx = NULL;
 AVCodecContext *pCodecCtx = NULL;
 AVCodec *pCodec = NULL;
