@@ -1,4 +1,4 @@
-媒体播放的概念
+# 媒体播放的概念
 
 多媒体文件(.flv, .ts, .avi)被称做container
 
@@ -8,7 +8,7 @@
 
 <img src="./data/flv-mi.png" style="zoom:80%"/>
 
-video的主要参数
+## video的主要参数
 
 编码格式codec, 譬如AVC
 
@@ -20,7 +20,7 @@ video的主要参数
 
 
 
-audio的主要参数
+## audio的主要参数
 
 编码格式codec, 譬如AAC
 
@@ -34,7 +34,7 @@ PCM 就是编码之前的数据, 根据采样率来算, 譬如44.1kHz, 就是一
 
 
 
-普通player的一般flow
+# 普通player的一般flow
 
 source-->打开码流, 一般是本地或者网络
 
@@ -52,7 +52,7 @@ renderer->通过音画同步把数据播放出去
 
 
 
-ffmpeg版本(an应用也调试通过)
+# ffmpeg版本(an应用也调试通过)
 
 3.4 release
 
@@ -60,9 +60,7 @@ https://github.com/FFmpeg/FFmpeg/releases/tag/n3.4
 
 
 
-准备工作:
-
-下载ffmpeg     
+## 下载ffmpeg     
 
 wget http://ffmpeg.org/releases/ffmpeg-3.4.tar.bz2
 
@@ -72,7 +70,7 @@ git 下载的都是最新的源码, 不确定性比较高. 最好还是搞个rel
 
 
 
-介绍./configure的参数
+## 介绍./configure的参数
 
 ./configure --help > help.cfg
 
@@ -82,7 +80,7 @@ git 下载的都是最新的源码, 不确定性比较高. 最好还是搞个rel
 
 我个人觉得可能要修改的参数
 
-mac编译脚本
+## mac编译脚本
 
 export PREFIX=./mac
 
@@ -94,7 +92,7 @@ brew install automake fdk-aac git libtool libvorbis libvpx opus sdl sdl2 shtool 
 
 
 
-an编译脚本
+## an编译脚本
 
 export NDK=/Users/knox/Documents/envOrTool/android/android-ndk-r14b
 
@@ -108,19 +106,21 @@ export PREFIX=./android/$CPU
 
 
 
-ffmpeg能干嘛, ffmpeg提供一系列的doc, 完整地介绍有什么功能.
+## ffmpeg提供一系列的doc
 
 <img src="./data/ffmpeg-doc.png" style="zoom:80%"/>
 
 
 
-我们简单展示ffplay的播放功能
+## 简单展示ffplay的播放功能
 
 ffplay -i ./data/AngryBirds.flv
 
 
 
-我们从这里出发, 学习ffmpeg, 介绍一些ffmpeg的常用类或者叫结构体
+# 从这里出发, 学习ffmpeg
+
+## 简介ffmpeg的常用类或叫结构体
 
 AVFormatContext *pFormatCtx 扮演container, 入参可以是文件, 可以是url
 
@@ -136,17 +136,17 @@ AVFrame *pFrame 扮演帧, 且是未被压缩的
 
 
 
-举例子:
+# 没图说个蛋
 
-macOrAn实战系列
+## mac&An实战
 
-player4mac
+### player4mac
 
 简单播放器, 播放flv
 
 
 
-kplay.c
+#### kplay.c
 
 target: 打开一个flv影片, 将video剥离出来并且解码, 把解码后的数据存起来, 远观一下.
 
@@ -306,7 +306,7 @@ releaseResource()
 
 
 
-kplay2.c
+#### kplay2.c
 
 target: 打开一个flv影片, 将video剥离出来并且解码, 并且渲染出来.
 
@@ -394,7 +394,7 @@ releaseResource()
 
 
 
-kplay3.c
+#### kplay3.c
 
 target: 打开一个flv影片, 将video和audio都剥离出来, 并且解码, 视频渲染出来, 音频播放出来
 
@@ -523,19 +523,21 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, AVFrame *aFrame, uint8_t **pcm
 
 
 
-player4An
+### player4An
 
 
 
 
 
-纸上谈兵系列
+## 纸上谈兵
 
 播放flow的主体也大致描述了. 但是还有很多细节的东西, 如果看ffplay, 就能发现还有很多操作. 毕竟从实验室demo到成熟的产品, 有90%是实验室外面付出的, 甚至更多啦.
 
 所以挑了一些点切入ffmpeg源码, 拿flv来做例子
 
-A ffmpeg是如何检查container的, 也就是怎么做probe的?
+### ffmpeg probe
+
+是如何检查影片属于哪种container的
 
 ```c
 int avformat_open_input(AVFormatContext **ps, const char *filename, AVInputFormat *fmt, 	AVDictionary **options)
@@ -633,8 +635,6 @@ static int probe(AVProbeData *p, int live)
 
 
 
-B ffmpeg如何去parse header
-
 ```c
 int avformat_open_input(AVFormatContext **ps, const char *filename, AVInputFormat *fmt, 	AVDictionary **options)
 {
@@ -674,9 +674,9 @@ static int flv_read_header(AVFormatContext *s)
 
 
 
-C ffmpeg怎么找到container里边的video/audio/subtitle的?
+### ffmpeg get stream info
 
-
+找到container里边的video/audio/subtitle的基本信息
 
 ```c
 int avformat_find_stream_info(AVFormatContext *ic, AVDictionary **options)
@@ -784,27 +784,53 @@ static int flv_read_packet(AVFormatContext *s, AVPacket *pkt)
         
     }
     
-    // 进一步提取video讯息
+    // 进一步提取讯息
+    if (st->codecpar->codec_id == AV_CODEC_ID_AAC ||
+       st->codecpar->codec_id == AV_CODEC_ID_H264 ||
+       st->codecpar->codec_id == AV_CODEC_ID_MPEG4)
+    {
+        int type = avio_r8(s->pb);
+        if (st->codecpar->codec_id == AV_CODEC_ID_H264 ||
+            st->codecpar->codec_id == AV_CODEC_ID_MPEG4) {
+			// sign extension
+			int32_t cts = (avio_rb24(s->pb) + 0xff800000) ^ 0xff800000;
+			pts = dts + cts;
+    	}
+    }
     
+    // 构建AVPacket
+    ret = av_get_packet(s->pb, pkt, size);
+    pkt->dts          = dts;
+    pkt->pts          = pts == AV_NOPTS_VALUE ? dts : pts;
+    pkt->stream_index = st->index;
+    pkt->pos          = pos;
 }
 ```
 
 
 
+# 相关知识:
+
+## Nginx
 
 
 
-
-相关知识:
-
-nginx
+## Opengl
 
 
 
-opengl
+## OpenGrok
 
-
-
-opengrok
+源码
 
 https://github.com/oracle/opengrok/releases/tag/1.1-rc21
+
+参考blog
+
+http://blog.csdn.net/ds1130071727/article/details/78687038
+
+http://blog.csdn.net/w860316/article/details/72796295
+
+http://blog.csdn.net/finewind/article/details/47362525
+
+http://blog.csdn.net/zhanglf02/article/details/73565354
