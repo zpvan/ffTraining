@@ -1,4 +1,4 @@
-# 媒体播放的概念
+# MultiMedia
 
 多媒体文件(.flv, .ts, .avi)被称做container
 
@@ -34,7 +34,9 @@ PCM 就是编码之前的数据, 根据采样率来算, 譬如44.1kHz, 就是一
 
 
 
-# 普通player的一般flow
+# Player
+
+普通的播放flow
 
 source-->打开码流, 一般是本地或者网络
 
@@ -52,7 +54,7 @@ renderer->通过音画同步把数据播放出去
 
 
 
-# ffmpeg版本(an应用也调试通过)
+# ffmpeg Version
 
 3.4 release
 
@@ -118,7 +120,7 @@ ffplay -i ./data/AngryBirds.flv
 
 
 
-# 从这里出发, 学习ffmpeg
+# Introduction
 
 ## 简介ffmpeg的常用类或叫结构体
 
@@ -136,9 +138,9 @@ AVFrame *pFrame 扮演帧, 且是未被压缩的
 
 
 
-# 没图说个蛋
+# RTFC
 
-## mac&An实战
+## mac&An App
 
 ### player4mac
 
@@ -629,9 +631,9 @@ static int probe(AVProbeData *p, int live)
 
 <img src="./data/flv-hex.png" style="zoom:80%"/>
 
-插图一张, flv的文件结构
+插图一张, flv的文件头结构
 
-<img src="./data/flv-struct.png" style="zoom:100%"/>
+<img src="./data/flv-header.png" style="zoom:100%"/>
 
 
 
@@ -677,6 +679,14 @@ static int flv_read_header(AVFormatContext *s)
 ### ffmpeg get stream info
 
 找到container里边的video/audio/subtitle的基本信息
+
+插图一张, flv的tag结构
+
+<img src="./data/flv-tag.png" style="zoom:100%"/>
+
+<img src="./data/flv-tag2.png" style="zoom:100%"/>
+
+
 
 ```c
 int avformat_find_stream_info(AVFormatContext *ic, AVDictionary **options)
@@ -809,13 +819,17 @@ static int flv_read_packet(AVFormatContext *s, AVPacket *pkt)
 
 
 
-# 相关知识:
+
+
+
+
+# More
 
 ## Nginx
 
 
 
-## Opengl
+## OpenGL
 
 
 
