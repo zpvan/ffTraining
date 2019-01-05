@@ -11,7 +11,7 @@ static const int VIDEO_PICTURE_QUEUE_SIZE = 3;
 #define SDL_AUDIO_MIN_BUFFER_SIZE 512
 #define SDL_AUDIO_MAX_CALLBACKS_PER_SEC 30
 
-#define MAX_AUDIOQ_SIZE 20
+#define MAX_AUDIOQ_SIZE 200000
 #define MAX_VIDEOQ_SIZE 500000
 
 typedef struct PacketQueue {
@@ -166,8 +166,6 @@ static int queue_picture(VideoState *is, AVFrame *pFrame)
         is->pictq_size++;
         SDL_UnlockMutex(is->pictq_mutex);
     }
-
-    // free(pFrame);
     return 0;
 }
 
@@ -178,7 +176,6 @@ static int video_thread(void *arg)
     int frameFinished;
     AVFrame *pFrame;
     pFrame = av_frame_alloc();
-    printf("alloc [pFrame]=[%p]\n", pFrame);
     for(;;) {
         if(packet_queue_get(&is->videoq, packet, 1) < 0) {
             // means we quit getting packets
@@ -233,8 +230,7 @@ static int stream_component_open(VideoState *is, int stream_index)
 
         is->au_convert_ctx = swr_alloc(); 
         is->au_convert_ctx = swr_alloc_set_opts(is->au_convert_ctx, av_get_default_channel_layout(wanted_spec.channels), AV_SAMPLE_FMT_S16,wanted_spec.freq, av_get_default_channel_layout(codecCtx->channels), codecCtx->sample_fmt, codecCtx->sample_rate, 0, NULL);
-        printf("alloc [au_convert_ctx]=[%p]\n", is->au_convert_ctx);
-        printf("In [channels, channels_layout, sample_fmt, sample_rate]=[%d, %d, %d, %d]\n", codecCtx->channels, av_get_default_channel_layout(codecCtx->channels), codecCtx->sample_fmt, codecCtx->sample_rate);
+        // printf("In [channels, channels_layout, sample_fmt, sample_rate]=[%d, %d, %d, %d]\n", codecCtx->channels, av_get_default_channel_layout(codecCtx->channels), codecCtx->sample_fmt, codecCtx->sample_rate);
         if (swr_init(is->au_convert_ctx) != 0)
         {
             printf("swr_init failed!\n");
@@ -321,7 +317,6 @@ static int read_thread(void *arg)
         printf("find audio stream failed!\n");
         return -1;
     }
-    // is->videoStream = -1;
 
     // 打开解码器
     if (is->videoStream != -1)
@@ -362,11 +357,6 @@ static int read_thread(void *arg)
         }
     }
 
-    // while(!is->quit) {
-    //     SDL_Delay(100);
-    // }
-
-fail:
     if (1)
     {
         SDL_Event event;
@@ -374,7 +364,6 @@ fail:
         event.user.data1 = is;
         SDL_PushEvent(&event);
     }
-    printf("read_thread-000\n");
     return 0;
 }
 
@@ -418,11 +407,8 @@ int main(int argc, char *argv[])
     while (!quit)
     {
         usleep(100); //0.1ms
-        // printf("while [quit]=[%d]\n", quit);
         while (SDL_PollEvent(&event) && !quit)
         {
-            // printf("SDL_PollEvent [quit]=[%d]\n", quit);
-
             switch (event.type)
             {
                 case SDL_QUIT:
@@ -628,11 +614,9 @@ int audio_decode_frame(VideoState *is, uint8_t **pcm)
         int out_size = 2 * aFrame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
         *pcm = av_malloc(out_size);
         uint8_t **out = pcm;
-        // printf("[au_convert_ctx]=[%p]\n", is->au_convert_ctx);
         int len = swr_convert(is->au_convert_ctx, out, aFrame->nb_samples + 256, (const uint8_t **)aFrame->extended_data, aFrame->nb_samples);
         int org_size = aFrame->channels * aFrame->nb_samples * av_get_bytes_per_sample(aCodecCtx->sample_fmt);
         int resample_size = len * 2 * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-        // printf("resample_size [%d]\n", resample_size);
         return resample_size;
     }
     if (pkt.data)

@@ -400,7 +400,7 @@ releaseResource()
 
 target: 打开一个flv影片, 将video和audio都剥离出来, 并且解码, 视频渲染出来, 音频播放出来
 
-gcc -o kplay3 kplay3.c -I./include/ -L./lib/ -lavcodec -lavformat -lswscale -lswresample -lz -lm \`sdl-config --cflags --libs`
+gcc -o kplay3 kplay3.c -I./include/ -L./lib/ -lavcodec -lavformat -lavutil -lswscale -lswresample -lz -lm \`sdl-config --cflags --libs`
 
 我们只关注音频的flow
 
@@ -522,6 +522,12 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, AVFrame *aFrame, uint8_t **pcm
 ```
 
 
+
+#### kplay4.c
+
+target: 重构kplay3, render在main-thread, demux在read-thread, video decode在video-thread, audio decode在SDLAudio的callback-thread
+
+gcc -o kplay4 kplay4.c -I./include/ -L./lib/ -lavcodec -lavformat -lavutil -lswscale -lswresample -lz -lm \`sdl-config --cflags --libs`
 
 
 
