@@ -450,7 +450,7 @@
 @c @set config-libdrm no
 @c @set config-libflite no
 @c @set config-libfontconfig no
-@c @set config-libfreetype no
+@set config-libfreetype yes
 @c @set config-libfribidi no
 @c @set config-libgme no
 @c @set config-libgsm no
@@ -1798,7 +1798,7 @@
 @set config-drawbox-filter yes
 @set config-drawgraph-filter yes
 @set config-drawgrid-filter yes
-@c @set config-drawtext-filter no
+@set config-drawtext-filter yes
 @set config-edgedetect-filter yes
 @set config-elbg-filter yes
 @c @set config-eq-filter no

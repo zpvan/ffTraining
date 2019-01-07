@@ -1,1 +1,1 @@
-config:x86:x86_64:generic:darwin:Apple LLVM version 10.0.0 (clang-1000.10.44.4):--prefix=./mac --enable-shared --disable-static
+config:x86:x86_64:generic:darwin:Apple LLVM version 10.0.0 (clang-1000.10.44.4):--prefix=./mac --enable-shared --disable-static --enable-libfreetype

@@ -179,6 +179,8 @@ int main(int argc, char *argv[])
     sws_freeContext(img_convert_ctx);
 
     SDL_DestroyTexture(texture);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
 
     // 退出SDL
     SDL_Quit();

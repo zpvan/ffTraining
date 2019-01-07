@@ -4,4 +4,5 @@ export PREFIX=./mac
 ./configure \
     --prefix=$PREFIX \
     --enable-shared \
-    --disable-static
+    --disable-static \
+    --enable-libfreetype

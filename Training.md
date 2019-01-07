@@ -531,6 +531,137 @@ gcc -o kplay4 kplay4.c -I./include/ -L./lib/ -lavcodec -lavformat -lavutil -lsws
 
 
 
+#### kplay2_wm_drawtext.c
+
+target: 为视频叠加字符水印
+
+gcc -o kplay2_wm kplay2_wm_drawtext.c -I./include/ -L./lib/ -lavcodec -lavformat -lswscale -lavfilter -lz -lm \`sdl2-config --cflags --libs`
+
+利用libavfilter去做水印, 在kplay2_sdl2.c上做修改
+
+只关注跟avfilter有关系的flow
+
+```c
+AVFilterGraph *filter_graph = NULL;
+AVFilterContext *buffersink_ctx = NULL;
+AVFilterContext *buffersrc_ctx = NULL;
+
+// 定义好初始化avfilter的函数
+int init_filters(const char *filters_descr)
+{
+    int ret;
+    // 注册所有AVFilter
+    avfilter_register_all();
+    
+    /* buffer video source: the decoded frames from the decoder will be inserted here. */
+    char args[512];
+    AVFilter *buffersrc = avfilter_get_by_name("buffer");
+    snprintf(args, sizeof(args),
+            "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
+            pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
+            pCodecCtx->time_base.num, pCodecCtx->time_base.den,
+            pCodecCtx->sample_aspect_ratio.num, pCodecCtx->sample_aspect_ratio.den);
+    // 为FilterGraph分配内存
+    filter_graph = avfilter_graph_alloc();
+    // 创建并向FilterGraph中添加一个Filter
+    ret = avfilter_graph_create_filter(&buffersrc_ctx, buffersrc, "in",
+        args, NULL, filter_graph);
+    if (ret < 0)
+    {
+        printf("avfilter_graph_create_filter in failed! [%d]\n", ret);
+        return ret;
+    }
+
+    /* buffer video sink: to terminate the filter chain. */
+    AVFilter *buffersink = avfilter_get_by_name("buffersink");
+    enum AVPixelFormat pix_fmts[] = {AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE};
+    AVBufferSinkParams *buffersink_params;
+    buffersink_params = av_buffersink_params_alloc();
+    buffersink_params->pixel_fmts = pix_fmts;
+    ret = avfilter_graph_create_filter(&buffersink_ctx, buffersink, "out", NULL,                                          	      buffersink_params, filter_graph);
+    av_free(buffersink_params);
+    if (ret < 0)
+    {
+        printf("avfilter_graph_create_filter out failed! [%d]\n", ret);
+        return ret;
+    }
+
+    /* Endpoints for the filter graph. */
+    AVFilterInOut *outputs = avfilter_inout_alloc();
+    outputs->name = av_strdup("in");
+    outputs->filter_ctx = buffersrc_ctx;
+    outputs->pad_idx = 0;
+    outputs->next = NULL;
+
+    AVFilterInOut *inputs = avfilter_inout_alloc();
+    inputs->name = av_strdup("out");
+    inputs->filter_ctx = buffersink_ctx;
+    inputs->pad_idx = 0;
+    inputs->next = NULL;
+
+    // 将一串通过字符串描述的Graph添加到FilterGraph中
+    if ((ret = avfilter_graph_parse_ptr(filter_graph, filters_descr, &inputs, &outputs, 		NULL)) < 0)
+    {
+        printf("avfilter_graph_parse_ptr failed! [%d]\n", ret);
+        return ret;
+    }
+
+    // 检查FilterGraph的配置
+    if ((ret = avfilter_graph_config(filter_graph, NULL)) < 0)
+    {
+        printf("avfilter_graph_config failed! [%d]\n", ret);
+        return ret;
+    }
+
+    return 0;
+}
+```
+
+在打开视频解码器之后做初始化, 并且准备好存放加水印之后的AVFrame
+
+```c
+AVFrame *pFrame_out = NULL;
+
+// 初始化filter
+const char *filters_descr = "drawtext=fontfile=./../data/Keyboard.ttf:fontcolor=green:fontsize=30:text='haha'";
+if (init_filters(filters_descr) < 0)
+{
+	printf("init_filters failed!\n");
+	return -1;
+}
+
+pFrame_out = av_frame_alloc();
+```
+
+解码出来每帧AVFrame都走一遍filter
+
+```c
+// 如果拿到视频帧
+if (frameFinished)
+{
+	/* push the decoded frame into the filtergraph */
+	if (av_buffersrc_add_frame(buffersrc_ctx, pFrame) < 0)
+	{
+		printf("av_buffersrc_add_frame failded!\n");
+		break;
+	}
+	/* pull filtered pictures from the filtergraph */
+	if (av_buffersink_get_frame(buffersink_ctx, pFrame_out) < 0)
+	{
+		printf("av_buffersink_get_frame failed!\n");
+		break;
+	}
+}
+```
+
+
+
+
+
+
+
+
+
 ### player4An
 
 
@@ -833,7 +964,7 @@ static int flv_read_packet(AVFormatContext *s, AVPacket *pkt)
 
 
 
-## SDL
+## SDL2
 
 https://wiki.libsdl.org/MigrationGuide
 
