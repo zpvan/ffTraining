@@ -831,6 +831,26 @@ static int flv_read_packet(AVFormatContext *s, AVPacket *pkt)
 
 # More
 
+
+
+## SDL
+
+https://wiki.libsdl.org/MigrationGuide
+
+kplay2_sdl2.c
+
+gcc -o kplay2_sdl2 kplay2_sdl2.c -I./include/ -L./lib/ -lavcodec -lavformat -lswscale -lz -lm \`sdl2-config --cflags --libs`
+
+kplay3_sdl2.c
+
+gcc -o kplay3_sdl2 kplay3_sdl2.c -I./include/ -L./lib/ -lavcodec -lavformat -lavutil -lswscale -lswresample -lz -lm \`sdl2-config --cflags --libs`
+
+kplay4_sdl2.c
+
+gcc -o kplay4_sdl2 kplay4_sdl2.c -I./include/ -L./lib/ -lavcodec -lavformat -lavutil -lswscale -lswresample -lz -lm \`sdl2-config --cflags --libs`
+
+
+
 ## Nginx
 
 
