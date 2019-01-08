@@ -15,27 +15,23 @@ static unsigned sws_flags = SWS_BICUBIC;
 
 void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame);
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     // 注册所有的文件格式和编解码器的库
     av_register_all();
 
-    if (argc != 2)
-    {
+    if (argc != 2) {
         printf("plz intput file\n");
         return -1;
     }
 
     // 打开多媒体文件
-    if (avformat_open_input(&pFormatCtx, argv[1], NULL, NULL) != 0)
-    {
+    if (avformat_open_input(&pFormatCtx, argv[1], NULL, NULL) != 0) {
         printf("open input [file]=[%s] failed!\n", argv[1]);
         return -1;
     }
 
     // 解析流讯息
-    if (avformat_find_stream_info(pFormatCtx, NULL) < 0)
-    {
+    if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
         printf("find stream info failed!\n");
         return -1;
     }
@@ -45,16 +41,13 @@ int main(int argc, char *argv[])
 
     // 找到第一条视频流
     int i;
-    for (i = 0; i < pFormatCtx->nb_streams; i++)
-    {
-        if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
-        {
+    for (i = 0; i < pFormatCtx->nb_streams; i++) {
+        if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
             videoStream = i;
             break;
         }
     }
-    if (videoStream == -1)
-    {
+    if (videoStream == -1) {
         printf("find video stream failed!\n");
         return -1;
     }
@@ -64,31 +57,27 @@ int main(int argc, char *argv[])
 
     // 找到对应的视频解码器
     pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
-    if (pCodec == NULL)
-    {
+    if (pCodec == NULL) {
         printf("unsupported [codec]=[%d]!\n", pCodecCtx->codec_id);
         return -1;
     }
 
     // 打开解码器
-    if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
-    {
+    if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) {
         printf("could not open codec\n");
         return -1;
     }
 
     // 分配视频帧内存空间
     pFrame = av_frame_alloc();
-    if (pFrame == NULL)
-    {
+    if (pFrame == NULL) {
         printf("alloc av frame failed!\n");
         return -1;
     }
 
     // 分配RGB的视频帧内存空间
     pFrameRGB = av_frame_alloc();
-    if (pFrameRGB == NULL)
-    {
+    if (pFrameRGB == NULL) {
         printf("alloc rgb av frame failed!\n");
         return -1;
     }
@@ -107,28 +96,23 @@ int main(int argc, char *argv[])
     AVPacket packet;
 
     i = 0;
-    while(av_read_frame(pFormatCtx, &packet) >= 0)
-    {
+    while (av_read_frame(pFormatCtx, &packet) >= 0) {
         // 检查packet是否是video
-        if (packet.stream_index == videoStream)
-        {
+        if (packet.stream_index == videoStream) {
             // 解码视频帧
             avcodec_decode_video2(pCodecCtx, pFrame, &frameFinished, &packet);
 
             // 如果拿到视频帧
-            if (frameFinished)
-            {
+            if (frameFinished) {
                 // 解码后的视频帧转换成RGB格式
                 // img_convert((AVPicture *)pFrameRGB, AV_PIX_FMT_RGB24, (AVPicture *)pFrame, pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height);
                 img_convert_ctx = sws_getCachedContext(img_convert_ctx, pFrame->width, pFrame->height, pFrame->format, pFrame->width, pFrame->height, AV_PIX_FMT_RGB24, sws_flags, NULL, NULL, NULL);
-                if (img_convert_ctx != NULL)
-                {
+                if (img_convert_ctx != NULL) {
                     sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0, pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
                 }
 
                 // 保存视频帧到硬盘
-                if (++i > 30 && i < 35)
-                {
+                if (++i > 30 && i < 35) {
                     SaveFrame(pFrameRGB, pCodecCtx->width, pCodecCtx->height, i);
                 }
             }
@@ -156,8 +140,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame)
-{
+void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame) {
     FILE *pFile;
     char szFilename[32];
     int y;
@@ -165,8 +148,7 @@ void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame)
     // 打开文件
     sprintf(szFilename, "frame%d.ppm", iFrame);
     pFile = fopen(szFilename, "wb");
-    if (pFile == NULL)
-    {
+    if (pFile == NULL) {
         printf("open file failed!\n");
         return;
     }
@@ -175,8 +157,7 @@ void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame)
     fprintf(pFile, "P6\n%d %d\n255\n", width, height);
 
     // 写像素数据
-    for (y = 0; y < height; ++y)
-    {
+    for (y = 0; y < height; ++y) {
         fwrite(pFrame->data[0] + y * pFrame->linesize[0], 1, width * 3, pFile);
     }
 

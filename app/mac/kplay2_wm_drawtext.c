@@ -32,27 +32,23 @@ int init_filters(const char *filters_descr);
 
 static unsigned sws_flags = SWS_BICUBIC;
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     // 注册所有的文件格式和编解码器的库
     av_register_all();
 
-    if (argc != 2)
-    {
+    if (argc != 2) {
         printf("plz intput file\n");
         return -1;
     }
 
     // 打开多媒体文件
-    if (avformat_open_input(&pFormatCtx, argv[1], NULL, NULL) != 0)
-    {
+    if (avformat_open_input(&pFormatCtx, argv[1], NULL, NULL) != 0) {
         printf("open input [file]=[%s] failed!\n", argv[1]);
         return -1;
     }
 
     // 解析流讯息
-    if (avformat_find_stream_info(pFormatCtx, NULL) < 0)
-    {
+    if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
         printf("find stream info failed!\n");
         return -1;
     }
@@ -62,16 +58,13 @@ int main(int argc, char *argv[])
 
     // 找到第一条视频流
     int i;
-    for (i = 0; i < pFormatCtx->nb_streams; i++)
-    {
-        if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
-        {
+    for (i = 0; i < pFormatCtx->nb_streams; i++) {
+        if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
             videoStream = i;
             break;
         }
     }
-    if (videoStream == -1)
-    {
+    if (videoStream == -1) {
         printf("find video stream failed!\n");
         return -1;
     }
@@ -81,21 +74,18 @@ int main(int argc, char *argv[])
 
     // 找到对应的视频解码器
     pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
-    if (pCodec == NULL)
-    {
+    if (pCodec == NULL) {
         printf("unsupported [codec]=[%d]!\n", pCodecCtx->codec_id);
         return -1;
     }
 
     // 打开解码器
-    if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
-    {
+    if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) {
         printf("could not open codec\n");
         return -1;
     }
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER))
-    {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
         printf("could not initialize SDL %s\n", SDL_GetError());
         return -1;
     }
@@ -105,15 +95,13 @@ int main(int argc, char *argv[])
                           SDL_WINDOWPOS_UNDEFINED,
                           pCodecCtx->width, pCodecCtx->height,
                           SDL_WINDOW_OPENGL);
-    if (!window)
-    {
+    if (!window) {
         printf("SDL: could not create window - exiting\n");
         return -1;
     }
 
     renderer = SDL_CreateRenderer(window, -1, 0);
-    if (!renderer)
-    {
+    if (!renderer) {
         printf("SDL: could not create renderer - exiting\n");
         return -1;
     }
@@ -131,23 +119,20 @@ int main(int argc, char *argv[])
 
     // 分配视频帧内存空间
     pFrame = av_frame_alloc();
-    if (pFrame == NULL)
-    {
+    if (pFrame == NULL) {
         printf("alloc av frame failed!\n");
         return -1;
     }
 
     // 初始化filter
     const char *filters_descr = "drawtext=fontfile=./../data/Keyboard.ttf:fontcolor=green:fontsize=30:text='haha'";
-    if (init_filters(filters_descr) < 0)
-    {
+    if (init_filters(filters_descr) < 0) {
         printf("init_filters failed!\n");
         return -1;
     }
 
     pFrame_out = av_frame_alloc();
-    if (pFrame_out == NULL)
-    {
+    if (pFrame_out == NULL) {
         printf("alloc out av frame failed!\n");
         return -1;
     }
@@ -160,26 +145,21 @@ int main(int argc, char *argv[])
     SDL_Event event;
 
     i = 0;
-    while(av_read_frame(pFormatCtx, &packet) >= 0)
-    {
+    while (av_read_frame(pFormatCtx, &packet) >= 0) {
         // 检查packet是否是video
-        if (packet.stream_index == videoStream)
-        {
+        if (packet.stream_index == videoStream) {
             // 解码视频帧
             avcodec_decode_video2(pCodecCtx, pFrame, &frameFinished, &packet);
 
             // 如果拿到视频帧
-            if (frameFinished)
-            {
+            if (frameFinished) {
                 /* push the decoded frame into the filtergraph */
-                if (av_buffersrc_add_frame(buffersrc_ctx, pFrame) < 0)
-                {
+                if (av_buffersrc_add_frame(buffersrc_ctx, pFrame) < 0) {
                     printf("av_buffersrc_add_frame failded!\n");
                     break;
                 }
                 /* pull filtered pictures from the filtergraph */
-                if (av_buffersink_get_frame(buffersink_ctx, pFrame_out) < 0)
-                {
+                if (av_buffersink_get_frame(buffersink_ctx, pFrame_out) < 0) {
                     printf("av_buffersink_get_frame failed!\n");
                     break;
                 }
@@ -197,8 +177,7 @@ int main(int argc, char *argv[])
         av_free_packet(&packet);
 
         SDL_PollEvent(&event);
-        switch (event.type)
-        {
+        switch (event.type) {
             case SDL_QUIT:
                 SDL_Quit();
                 exit(0);
@@ -233,8 +212,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-int init_filters(const char *filters_descr)
-{
+int init_filters(const char *filters_descr) {
     int ret;
     // 注册所有AVFilter
     avfilter_register_all();
@@ -252,8 +230,7 @@ int init_filters(const char *filters_descr)
     // 创建并向FilterGraph中添加一个Filter
     ret = avfilter_graph_create_filter(&buffersrc_ctx, buffersrc, "in",
                                        args, NULL, filter_graph);
-    if (ret < 0)
-    {
+    if (ret < 0) {
         printf("avfilter_graph_create_filter in failed! [%d]\n", ret);
         return ret;
     }
@@ -266,8 +243,7 @@ int init_filters(const char *filters_descr)
     buffersink_params->pixel_fmts = pix_fmts;
     ret = avfilter_graph_create_filter(&buffersink_ctx, buffersink, "out", NULL, buffersink_params, filter_graph);
     av_free(buffersink_params);
-    if (ret < 0)
-    {
+    if (ret < 0) {
         printf("avfilter_graph_create_filter out failed! [%d]\n", ret);
         return ret;
     }
@@ -286,15 +262,13 @@ int init_filters(const char *filters_descr)
     inputs->next = NULL;
 
     // 将一串通过字符串描述的Graph添加到FilterGraph中
-    if ((ret = avfilter_graph_parse_ptr(filter_graph, filters_descr, &inputs, &outputs, NULL)) < 0)
-    {
+    if ((ret = avfilter_graph_parse_ptr(filter_graph, filters_descr, &inputs, &outputs, NULL)) < 0) {
         printf("avfilter_graph_parse_ptr failed! [%d]\n", ret);
         return ret;
     }
 
     // 检查FilterGraph的配置
-    if ((ret = avfilter_graph_config(filter_graph, NULL)) < 0)
-    {
+    if ((ret = avfilter_graph_config(filter_graph, NULL)) < 0) {
         printf("avfilter_graph_config failed! [%d]\n", ret);
         return ret;
     }

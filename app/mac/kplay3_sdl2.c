@@ -51,27 +51,23 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, AVFrame *aFrame, uint8_t **pcm
 
 struct SwrContext *au_convert_ctx; 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     // 注册所有的文件格式和编解码器的库
     av_register_all();
 
-    if (argc != 2)
-    {
+    if (argc != 2) {
         printf("plz intput file\n");
         return -1;
     }
 
     // 打开多媒体文件
-    if (avformat_open_input(&pFormatCtx, argv[1], NULL, NULL) != 0)
-    {
+    if (avformat_open_input(&pFormatCtx, argv[1], NULL, NULL) != 0) {
         printf("open input [file]=[%s] failed!\n", argv[1]);
         return -1;
     }
 
     // 解析流讯息
-    if (avformat_find_stream_info(pFormatCtx, NULL) < 0)
-    {
+    if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
         printf("find stream info failed!\n");
         return -1;
     }
@@ -81,25 +77,20 @@ int main(int argc, char *argv[])
 
     // 找到第一条视频流跟音频流
     int i;
-    for (i = 0; i < pFormatCtx->nb_streams; i++)
-    {
-        if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO && videoStream < 0)
-        {
+    for (i = 0; i < pFormatCtx->nb_streams; i++) {
+        if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO && videoStream < 0) {
             videoStream = i;
         }
 
-        if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO && audioStream < 0)
-        {
+        if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO && audioStream < 0) {
             audioStream = i;
         }
     }
-    if (videoStream == -1)
-    {
+    if (videoStream == -1) {
         printf("find video stream failed!\n");
         return -1;
     }
-    if (audioStream == -1)
-    {
+    if (audioStream == -1) {
         printf("find audio stream failed!\n");
         return -1;
     }
@@ -125,37 +116,32 @@ int main(int argc, char *argv[])
     au_convert_ctx = swr_alloc(); 
     au_convert_ctx = swr_alloc_set_opts(au_convert_ctx, av_get_default_channel_layout(wanted_spec.channels), AV_SAMPLE_FMT_S16,wanted_spec.freq, av_get_default_channel_layout(aCodecCtx->channels), aCodecCtx->sample_fmt, aCodecCtx->sample_rate, 0, NULL);
     // printf("In [channels, channels_layout, sample_fmt, sample_rate]=[%d, %d, %d, %d]\n", aCodecCtx->channels, av_get_default_channel_layout(aCodecCtx->channels), aCodecCtx->sample_fmt, aCodecCtx->sample_rate);
-    if (swr_init(au_convert_ctx) != 0)
-    {
+    if (swr_init(au_convert_ctx) != 0) {
         printf("swr_init failed!\n");
         return -1;
-    };
+    }
 
     // 打开音频播放设备
     SDL_AudioSpec spec;
-    if (SDL_OpenAudio(&wanted_spec, &spec) < 0)
-    {
+    if (SDL_OpenAudio(&wanted_spec, &spec) < 0) {
         printf("SDL_OpenAudio failed %s\n", SDL_GetError());
         return -1;
     }
 
     // 找到对应的视频解码器
     pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
-    if (pCodec == NULL)
-    {
+    if (pCodec == NULL) {
         printf("unsupported [codec]=[%d]!\n", pCodecCtx->codec_id);
         return -1;
     }
 
     // 打开解码器
-    if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
-    {
+    if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) {
         printf("could not open codec\n");
         return -1;
     }
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER))
-    {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
         printf("could not initialize SDL %s\n", SDL_GetError());
         return -1;
     }
@@ -165,15 +151,13 @@ int main(int argc, char *argv[])
                           SDL_WINDOWPOS_UNDEFINED,
                           pCodecCtx->width, pCodecCtx->height,
                           SDL_WINDOW_OPENGL);
-    if (!window)
-    {
+    if (!window) {
         printf("SDL: could not create window - exiting\n");
         return -1;
     }
 
     renderer = SDL_CreateRenderer(window, -1, 0);
-    if (!renderer)
-    {
+    if (!renderer) {
         printf("SDL: could not create renderer - exiting\n");
         return -1;
     }
@@ -191,8 +175,7 @@ int main(int argc, char *argv[])
 
     // 分配视频帧内存空间
     pFrame = av_frame_alloc();
-    if (pFrame == NULL)
-    {
+    if (pFrame == NULL) {
         printf("alloc av frame failed!\n");
         return -1;
     }
@@ -206,14 +189,12 @@ int main(int argc, char *argv[])
 
     // 打开音频解码器
     aCodec = avcodec_find_decoder(aCodecCtx->codec_id);
-    if (!aCodec)
-    {
+    if (!aCodec) {
         printf("unsupported audio [codec]=[%d]\n", aCodecCtx->codec_id);
         return -1;
     }
 
-    if (avcodec_open2(aCodecCtx, aCodec, NULL) < 0)
-    {
+    if (avcodec_open2(aCodecCtx, aCodec, NULL) < 0) {
         printf("could not open audio codec\n");
         return -1;
     }
@@ -228,17 +209,14 @@ int main(int argc, char *argv[])
     // avio_set_interrupt_cb(decode_interrupt_cb);
 
     i = 0;
-    while(av_read_frame(pFormatCtx, &packet) >= 0)
-    {
+    while (av_read_frame(pFormatCtx, &packet) >= 0) {
         // 检查packet是否是video
-        if (packet.stream_index == videoStream)
-        {
+        if (packet.stream_index == videoStream) {
             // 解码视频帧
             avcodec_decode_video2(pCodecCtx, pFrame, &frameFinished, &packet);
 
             // 如果拿到视频帧
-            if (frameFinished)
-            {
+            if (frameFinished) {
                 SDL_UpdateYUVTexture(texture, NULL, pFrame->data[0], pFrame->linesize[0], pFrame->data[1], pFrame->linesize[1],pFrame->data[2], pFrame->linesize[2]);
 
                 SDL_RenderClear(renderer);
@@ -247,21 +225,17 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (packet.stream_index == audioStream)
-        {
+        if (packet.stream_index == audioStream) {
             packet_queue_put(&audioq, &packet);
             // audio不能释放packet, 因为还没解码
-        } 
-        else
-        {
+        } else {
             // video释放packet, 它是在av_read_frame里边分配内存packet.data
             av_free_packet(&packet);
         }
         
 
         SDL_PollEvent(&event);
-        switch (event.type)
-        {
+        switch (event.type) {
             case SDL_QUIT:
                 quit = 1;
                 SDL_Quit();
@@ -296,23 +270,19 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void packet_queue_init(PacketQueue *q)
-{
+void packet_queue_init(PacketQueue *q) {
     memset(q, 0, sizeof(PacketQueue));
     q->mutex = SDL_CreateMutex();
     q->cond = SDL_CreateCond();
 }
 
-int packet_queue_put(PacketQueue *q, AVPacket *pkt)
-{
+int packet_queue_put(PacketQueue *q, AVPacket *pkt) {
     AVPacketList *pkt1;
-    if (av_dup_packet(pkt) < 0)
-    {
+    if (av_dup_packet(pkt) < 0) {
         return -1;
     }
     pkt1 = av_malloc(sizeof(AVPacketList));
-    if (!pkt1)
-    {
+    if (!pkt1) {
         return -1;
     }
     pkt1->pkt = *pkt;
@@ -320,12 +290,9 @@ int packet_queue_put(PacketQueue *q, AVPacket *pkt)
 
     SDL_LockMutex(q->mutex);
 
-    if (!q->last_pkt)
-    {
+    if (!q->last_pkt) {
         q->first_pkt = pkt1;
-    }
-    else
-    {
+    } else {
         q->last_pkt->next = pkt1;
     }
     q->last_pkt = pkt1;
@@ -337,27 +304,22 @@ int packet_queue_put(PacketQueue *q, AVPacket *pkt)
     return 0;
 }
 
-int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block)
-{
+int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block) {
     AVPacketList *pkt1;
     int ret;
 
     SDL_LockMutex(q->mutex);
 
-    for (;;)
-    {
-        if (quit)
-        {
+    for (;;) {
+        if (quit) {
             ret = -1;
             break;
         }
 
         pkt1 = q->first_pkt;
-        if (pkt1)
-        {
+        if (pkt1) {
             q->first_pkt = pkt1->next;
-            if (!q->first_pkt)
-            {
+            if (!q->first_pkt) {
                 q->last_pkt = NULL;
             }
             q->nb_packets--;
@@ -366,14 +328,10 @@ int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block)
             av_free(pkt1);
             ret = 1;
             break;
-        } 
-        else if (!block)
-        {
+        } else if (!block) {
             ret = 0;
             break;
-        }
-        else
-        {
+        } else {
             SDL_CondWait(q->cond, q->mutex);
         }
     }
@@ -382,14 +340,12 @@ int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block)
     return ret;
 }
 
-int decode_interrupt_cb(void)
-{
+int decode_interrupt_cb(void) {
     printf("decode_interrupt_cb\n");
     return quit;
 }
 
-void audio_callback(void *userdata, Uint8 *stream, int len)
-{
+void audio_callback(void *userdata, Uint8 *stream, int len) {
     AVCodecContext *aCodecCtx = (AVCodecContext *) userdata;
     int len1, audio_size;
 
@@ -397,21 +353,17 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
     static unsigned int audio_buf_size = 0;
     static unsigned int audio_buf_index = 0;
 
-    while (len > 0) 
-    {
-        if (quit)
-        {
+    while (len > 0)  {
+        if (quit) {
             return;
         }
-        if (audio_buf_index >= audio_buf_size)
-        {
+        if (audio_buf_index >= audio_buf_size) {
             // 已经将全部解码后的数据送出去了, 再获取
             audio_buf_size = audio_decode_frame(aCodecCtx, aFrame, &audio_buf);
             audio_buf_index = 0;
         }
         len1 = audio_buf_size - audio_buf_index;
-        if (len1 > len)
-        {
+        if (len1 > len) {
             len1 = len;
         }
         memcpy(stream, (uint8_t *)audio_buf + audio_buf_index, len1);
@@ -421,28 +373,23 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
     }
 }
 
-int audio_decode_frame(AVCodecContext *aCodecCtx, AVFrame *aFrame, uint8_t **pcm)
-{
+int audio_decode_frame(AVCodecContext *aCodecCtx, AVFrame *aFrame, uint8_t **pcm) {
     static AVPacket pkt;
 
     int data_size;
     int got_output = 0;
     
-    if (*pcm)
-    {
+    if (*pcm) {
         av_free(*pcm);
     }
-    if (quit)
-    {
+    if (quit) {
         return -1;
     }
-    if (packet_queue_get(&audioq, &pkt, 1) < 0)
-    {
+    if (packet_queue_get(&audioq, &pkt, 1) < 0) {
         return -1;
     }
     avcodec_decode_audio4(aCodecCtx, aFrame, &got_output, &pkt);
-    if (got_output)
-    {
+    if (got_output) {
         // 通道数 * 单通道样本数 * 样本大小
         int out_size = 2 * aFrame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
         *pcm = av_malloc(out_size);
@@ -452,8 +399,7 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, AVFrame *aFrame, uint8_t **pcm
         int resample_size = len * 2 * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
         return resample_size;
     }
-    if (pkt.data)
-    {
+    if (pkt.data) {
         av_free_packet(&pkt);
     }
     return 0;
