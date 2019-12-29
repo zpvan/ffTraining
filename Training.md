@@ -154,7 +154,7 @@ target: 打开一个flv影片, 将video剥离出来并且解码, 把解码后的
 
 gcc -o kplay kplay.c -I./include/ -L./lib/ -lavcodec -lavformat -lswscale -lz -lm
 
-./mac/kplay2 ../data/AngryBirds.flv
+./mac/kplay ../data/AngryBirds.flv
 
 我们将ffmpeg的常用套路抽离出来看看
 
@@ -666,6 +666,18 @@ if (frameFinished)
 
 
 
+### remuxer4mac
+
+实现如下功能
+
+```sh
+ffmpeg -i test.mp4 -c copy -f mpegts test.ts
+```
+
+#### remuxer.c
+
+
+
 
 
 ## 纸上谈兵
@@ -1101,4 +1113,7 @@ CBR的音频数据, 每帧的采样数是固定的, 通过  ((采样数/8 * 位�
 
 
 
-## MKV
+## TS
+
+
+
