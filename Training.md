@@ -676,6 +676,8 @@ ffmpeg -i test.mp4 -c copy -f mpegts test.ts
 
 #### remuxer.c
 
+gcc -o remuxer remuxer.c -I./include/ -L./lib/ -lavformat -lavutil -lz -lm
+
 
 
 
